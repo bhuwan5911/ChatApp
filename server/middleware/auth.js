@@ -1,24 +1,38 @@
-import User from "../models/User.js";
+// server/middleware/auth.js
+
 import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
-// middleware to protect routes
+export const protectRoute = async (req, res, next) => {
+    try {
+        let token;
 
-export const protectRoute = async (req, res, next) =>{
-    try{
-        const token = req.headers.token;
+        if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+            token = req.headers.authorization.split(" ")[1];
+        }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        if (!token) {
+            return res.status(401).json({ success: false, message: "Not authorized, no token" });
+        }
 
-        const user = await User.findById(decoded.userId).select("-password");
+        // This will decode the payload { userId: "..." }
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        if(!user) return res.json({ success: false, message: "User not find"});
+        if (!decoded) {
+            return res.status(401).json({ success: false, message: "Not authorized, token failed" });
+        }
 
-        req.user = user;
+        // We use decoded.userId to find the user
+        req.user = await User.findById(decoded.userId).select("-password");
+        
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
         next();
 
-    } catch(error){
-        console.log(error.message);
-        res.json({success : false, message : error.message});
-
+    } catch (error) {
+        console.error("Authorization Error:", error.message);
+        res.status(401).json({ success: false, message: "Not authorized" });
     }
-    }
+};

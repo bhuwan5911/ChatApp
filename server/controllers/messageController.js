@@ -68,7 +68,7 @@ export const getUserForSidebar = async (req, res)=>{
             res.json({success: false, message: error.message})
         }
         }
-     }
+     
 
      // Send message to selected user
      export const sendMessage = async ( req, res)=>{
